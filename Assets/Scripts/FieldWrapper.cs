@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using DG.DeInspektor.Attributes;
 
 public class FieldWrapper : MonoBehaviour
 {
@@ -15,13 +16,16 @@ public class FieldWrapper : MonoBehaviour
 		}
 	}
 
+	[SerializeField]
+	[DeEmptyAlert]
+	private FieldDisplay display;
 	private Field field;
 	private readonly Reaction[] reactions = {
 		new Reaction(KeyCode.W, Direction.Up), new Reaction(KeyCode.S, Direction.Down),
 		new Reaction(KeyCode.A, Direction.Left), new Reaction(KeyCode.D, Direction.Right)
 	};
 
-	private void Awake()
+	private void Start()
 	{
 		field = new Field(new int[,]{
 			{ 0, 2, 0, 2 },
@@ -30,6 +34,17 @@ public class FieldWrapper : MonoBehaviour
 			{ 32, 16, 32, 16 }
 		});
 		Debug.Log(field);
+		for(int x = 0; x < 4; ++x)
+		{
+			for(int y = 0; y < 4; ++y)
+			{
+				int score = field[x, y];
+				if(score != 0)
+				{
+					display.Add(x, y, score);
+				}
+			}
+		}
 	}
 
 	private void Update()
@@ -38,7 +53,7 @@ public class FieldWrapper : MonoBehaviour
 		{
 			if(Input.GetKeyDown(reaction.Input))
 			{
-				field.MakeMove(reaction.Result);
+				display.HandleMove(field.MakeMove(reaction.Result));
 				Debug.Log(field);
 				break;
 			}

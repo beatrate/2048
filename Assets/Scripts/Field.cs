@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class Field
 {
@@ -17,9 +18,41 @@ public class Field
 		field = fieldSetup;
 	}
 
-	public void MakeMove(Direction direction)
+	public int this[int x, int y]
 	{
-		Move(direction);
+		get
+		{
+			return field[y, x];
+		}
+		set
+		{
+			field[y, x] = value;
+		}
+	}
+
+	public List<PositionChange> MakeMove(Direction direction)
+	{
+		List<PositionChange> changes = new List<PositionChange>();
+		switch(direction)
+		{
+			case Direction.Left:
+				CollapseHorizontal(changes, 0, Dimension, 1);
+				ShiftHorizontal(changes, 0, Dimension, 1);
+				break;
+			case Direction.Right:
+				CollapseHorizontal(changes, Dimension - 1, -1, -1);
+				ShiftHorizontal(changes, Dimension - 1, -1, -1);
+				break;
+			case Direction.Up:
+				CollapseVertical(changes, 0, Dimension, 1);
+				ShiftVertical(changes, 0, Dimension, 1);
+				break;
+			case Direction.Down:
+				CollapseVertical(changes, Dimension - 1, -1, -1);
+				ShiftVertical(changes, Dimension - 1, -1, -1);
+				break;
+		}
+		return changes;
 	}
 
 	public override int GetHashCode()
@@ -71,30 +104,7 @@ public class Field
 		return value.ToString();
 	}
 
-	private void Move(Direction direction)
-	{
-		switch(direction)
-		{
-			case Direction.Left:
-				CollapseHorizontal(0, Dimension, 1);
-				ShiftHorizontal(0, Dimension, 1);
-				break;
-			case Direction.Right:
-				CollapseHorizontal(Dimension - 1, -1, -1);
-				ShiftHorizontal(Dimension - 1, -1, -1);
-				break;
-			case Direction.Up:
-				CollapseVertical(0, Dimension, 1);
-				ShiftVertical(0, Dimension, 1);
-				break;
-			case Direction.Down:
-				CollapseVertical(Dimension - 1, -1, -1);
-				ShiftVertical(Dimension - 1, -1, -1);
-				break;
-		}
-	}
-
-	private void CollapseVertical(int start, int end, int step)
+	private void CollapseVertical(List<PositionChange> changes, int start, int end, int step)
 	{
 		for(int column = 0; column < Dimension; ++column)
 		{
@@ -107,6 +117,7 @@ public class Field
 				}
 				if((last != -1) && (field[last, column] == field[row, column]))
 				{
+					changes.Add(new PositionChange(new Vector2Int(column, row), new Vector2Int(column, last), new Vector2Int(column, last)));
 					field[last, column] *= 2;
 					field[row, column] = 0;
 					last = -1;
@@ -119,7 +130,7 @@ public class Field
 		}
 	}
 
-	private void CollapseHorizontal(int start, int end, int step)
+	private void CollapseHorizontal(List<PositionChange> changes, int start, int end, int step)
 	{
 		for(int row = 0; row < Dimension; ++row)
 		{
@@ -132,6 +143,7 @@ public class Field
 				}
 				if((last != -1) && (field[row, last] == field[row, column]))
 				{
+					changes.Add(new PositionChange(new Vector2Int(column, row), new Vector2Int(last, row), new Vector2Int(last, row)));
 					field[row, last] *= 2;
 					field[row, column] = 0;
 					last = -1;
@@ -144,7 +156,7 @@ public class Field
 		}
 	}
 
-	private void ShiftVertical(int start, int end, int step)
+	private void ShiftVertical(List<PositionChange> changes, int start, int end, int step)
 	{
 		for(int column = 0; column < Dimension; ++column)
 		{
@@ -161,6 +173,15 @@ public class Field
 				}
 				if((field[row, column] != 0) && (edge != -1))
 				{
+					PositionChange changeWithCollapse = changes.Find(change => change.End.x == row && change.End.y == column);
+					if(changeWithCollapse != null)
+					{
+						changeWithCollapse.End.Set(edge, column);
+					}
+					else
+					{
+						changes.Add(new PositionChange(new Vector2Int(row, column), new Vector2Int(edge, column)));
+					}
 					field[edge, column] = field[row, column];
 					field[row, column] = 0;
 					edge += step;
@@ -169,7 +190,7 @@ public class Field
 		}
 	}
 
-	private void ShiftHorizontal(int start, int end, int step)
+	private void ShiftHorizontal(List<PositionChange> changes, int start, int end, int step)
 	{
 		for(int row = 0; row < Dimension; ++row)
 		{
@@ -186,64 +207,18 @@ public class Field
 				}
 				if((field[row, column] != 0) && (edge != -1))
 				{
+					PositionChange changeWithCollapse = changes.Find(change => change.End.x == row && change.End.y == column);
+					if(changeWithCollapse != null)
+					{
+						changeWithCollapse.End.Set(row, edge);
+					}
+					else
+					{
+						changes.Add(new PositionChange(new Vector2Int(row, column), new Vector2Int(row, edge)));
+					}
 					field[row, edge] = field[row, column];
 					field[row, column] = 0;
 					edge += step;
-				}
-
-			}
-		}
-	}
-
-	private void CollapseRight()
-	{
-		for(int row = 0; row < Dimension; ++row)
-		{
-			int last = -1;
-			for(int column = Dimension - 1; column >= 0; --column)
-			{
-				if(field[row, column] == 0)
-				{
-					continue;
-				}
-				if(last == -1)
-				{
-					last = column;
-				}
-				else if(field[row, last] == field[row, column])
-				{
-					field[row, last] *= 2;
-					field[row, column] = 0;
-					last = -1;
-				}
-				else
-				{
-					last = column;
-				}
-			}
-		}
-	}
-
-	private void ShiftRight()
-	{
-		for(int row = 0; row < Dimension; ++row)
-		{
-			int rightmost = -1;
-			for(int column = Dimension - 1; column >= 0; --column)
-			{
-				if(rightmost == -1)
-				{
-					if(field[row, column] == 0)
-					{
-						rightmost = column;
-					}
-					continue;
-				}
-				if((field[row, column] != 0) && (rightmost != -1))
-				{
-					field[row, rightmost] = field[row, column];
-					field[row, column] = 0;
-					rightmost = column == 0 ? -1 : rightmost - 1;
 				}
 
 			}
