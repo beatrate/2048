@@ -24,4 +24,9 @@ public class PositionChange
 		End = end;
 		CollapsePoint = collapsePoint;
 	}
+
+	public override string ToString()
+	{
+		return $"start:{Start} collapse:{CollapsePoint} end:{End}";
+	}
 }

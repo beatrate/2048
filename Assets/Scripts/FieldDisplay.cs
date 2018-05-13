@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using DG.DeInspektor.Attributes;
@@ -75,17 +76,74 @@ public class FieldDisplay : MonoBehaviour
 		GameObject cell = Instantiate(activeCellPrefab, PositionOf(x, y), activeCellPrefab.transform.rotation, activeParent);
 		cells[x, y] = cell.GetComponent<Cell>();
 		cells[x, y].Score = score;
+		cells[x, y].Redraw();
 	}
 
 	public void HandleMove(List<PositionChange> changes)
 	{
 		foreach(PositionChange change in changes)
 		{
+			Debug.Log(change);
+			Debug.Assert(cells[change.Start.x, change.Start.y] != null, "Cell doesnt exist in display");
+
+			Vector2 endPosition = PositionOf(change.End);
+
 			if(change.CollapsePoint != null)
 			{
+				Debug.Assert(cells[change.CollapsePoint.Value.x, change.CollapsePoint.Value.y] != null, "Collapsed cell doesnt exist");
+				Cell consumed = cells[change.Start.x, change.Start.y];
+				cells[change.Start.x, change.Start.y] = null;
+				consumed.transform.DOLocalMove(endPosition, transitionLength).OnComplete(() =>
+				{
+					Destroy(consumed.gameObject);
+				});
 
+				Cell moved = cells[change.CollapsePoint.Value.x, change.CollapsePoint.Value.y];
+				moved.Score *= 2;
+				if(change.CollapsePoint != change.End)
+				{
+					cells[change.End.x, change.End.y] = moved;
+					cells[change.CollapsePoint.Value.x, change.CollapsePoint.Value.y] = null;
+				}
+
+				moved.transform.DOLocalMove(endPosition, transitionLength).OnComplete(() =>
+				{
+					moved.Redraw();
+				});
+			}
+			else
+			{
+				Cell moved = cells[change.Start.x, change.Start.y];
+				cells[change.End.x, change.End.y] = moved;
+				cells[change.Start.x, change.Start.y] = null;
+				moved.transform.DOLocalMove(endPosition, transitionLength);
 			}
 		}
+	}
+
+	public override string ToString()
+	{
+		StringBuilder value = new StringBuilder();
+		value.Append("FieldDisplay\n");
+		for(int y = 0; y < height; ++y)
+		{
+			value.Append("{");
+			for(int x = 0; x < width; ++x)
+			{
+				value.Append(cells[x, y] != null ? cells[x, y].Score.ToString() : "null");
+				if(x != width - 1)
+				{
+					value.Append(" ");
+				}
+			}
+			value.Append("}");
+			if(y != height - 1)
+			{
+				value.Append(", \n");
+			}
+		}
+
+		return value.ToString();
 	}
 
 	private Vector2 PositionOf(int x, int y)

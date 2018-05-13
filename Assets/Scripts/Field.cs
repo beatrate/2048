@@ -18,17 +18,7 @@ public class Field
 		field = fieldSetup;
 	}
 
-	public int this[int x, int y]
-	{
-		get
-		{
-			return field[y, x];
-		}
-		set
-		{
-			field[y, x] = value;
-		}
-	}
+	public int this[int x, int y] => field[y, x];
 
 	public List<PositionChange> MakeMove(Direction direction)
 	{
@@ -83,6 +73,7 @@ public class Field
 	public override string ToString()
 	{
 		StringBuilder value = new StringBuilder();
+		value.Append("Field\n");
 		for(int row = 0; row < Dimension; ++row)
 		{
 			value.Append("{");
@@ -97,7 +88,7 @@ public class Field
 			value.Append("}");
 			if(row != Dimension - 1)
 			{
-				value.Append(", ");
+				value.Append(", \n");
 			}
 		}
 
@@ -173,14 +164,14 @@ public class Field
 				}
 				if((field[row, column] != 0) && (edge != -1))
 				{
-					PositionChange changeWithCollapse = changes.Find(change => change.End.x == row && change.End.y == column);
+					PositionChange changeWithCollapse = changes.Find(change => change.End.x == column && change.End.y == row);
 					if(changeWithCollapse != null)
 					{
-						changeWithCollapse.End.Set(edge, column);
+						changeWithCollapse.End = new Vector2Int(column, edge);
 					}
 					else
 					{
-						changes.Add(new PositionChange(new Vector2Int(row, column), new Vector2Int(edge, column)));
+						changes.Add(new PositionChange(new Vector2Int(column, row), new Vector2Int(column, edge)));
 					}
 					field[edge, column] = field[row, column];
 					field[row, column] = 0;
@@ -207,14 +198,14 @@ public class Field
 				}
 				if((field[row, column] != 0) && (edge != -1))
 				{
-					PositionChange changeWithCollapse = changes.Find(change => change.End.x == row && change.End.y == column);
+					PositionChange changeWithCollapse = changes.Find(change => change.End.x == column && change.End.y == row);
 					if(changeWithCollapse != null)
 					{
-						changeWithCollapse.End.Set(row, edge);
+						changeWithCollapse.End = new Vector2Int(edge, row);
 					}
 					else
 					{
-						changes.Add(new PositionChange(new Vector2Int(row, column), new Vector2Int(row, edge)));
+						changes.Add(new PositionChange(new Vector2Int(column, row), new Vector2Int(edge, row)));
 					}
 					field[row, edge] = field[row, column];
 					field[row, column] = 0;

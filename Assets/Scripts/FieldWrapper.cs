@@ -53,8 +53,14 @@ public class FieldWrapper : MonoBehaviour
 		{
 			if(Input.GetKeyDown(reaction.Input))
 			{
-				display.HandleMove(field.MakeMove(reaction.Result));
+				Debug.Log(reaction.Result);
+				Debug.Log("Before");
 				Debug.Log(field);
+				Debug.Log(display);
+				display.HandleMove(field.MakeMove(reaction.Result));
+				Debug.Log("After");
+				Debug.Log(field);
+				Debug.Log(display);
 				break;
 			}
 		}

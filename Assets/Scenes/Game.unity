@@ -525,7 +525,7 @@ MonoBehaviour:
   width: 4
   height: 4
   elementSize: 2.2
-  transitionLength: 0
+  transitionLength: 0.1
   start: {x: -3.3000002, y: 3.3000002}
   cellPrefab: {fileID: 1255581074428828, guid: c3608a57037e638468ff8204d5bd5cc3, type: 2}
   activeCellPrefab: {fileID: 1770396939105396, guid: ecfd3516f90b6074b9cff9f7fe41925f,

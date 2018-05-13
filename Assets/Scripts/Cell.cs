@@ -17,24 +17,12 @@ public class Cell : MonoBehaviour
 	[DeEmptyAlert]
 	private ColorProfile cellColors;
 
-	public int Score
-	{
-		get
-		{
-			return score;
-		}
-		set
-		{
-			score = value;
-			text.text = value.ToString();
-			Recolor(value);
-		}
-	}
-	private int score;
+	public int Score { get; set; }
 
-	private void Recolor(int currentScore)
+	public void Redraw()
 	{
-		text.color = textColors.GetColorOf(currentScore);
-		renderer.color = cellColors.GetColorOf(currentScore);
+		text.text = Score.ToString();
+		text.color = textColors.GetColorOf(Score);
+		renderer.color = cellColors.GetColorOf(Score);
 	}
 }
