@@ -16,6 +16,10 @@ public class FieldDisplay : MonoBehaviour
 	[SerializeField]
 	private float transitionLength;
 	[SerializeField]
+	private float popupStrength;
+	[SerializeField]
+	private float popupLength;
+	[SerializeField]
 	[HideInInspector]
 	private Vector2 start;
 	[SerializeField]
@@ -42,81 +46,66 @@ public class FieldDisplay : MonoBehaviour
 		cells = new Cell[width, height];
 	}
 
-	[DeMethodButton(mode = DeButtonMode.NoPlayMode)]
-	public void Setup()
+	public void Clear()
 	{
-		SetStart();
-		Clear();
-		if(cellPrefab == null)
-		{
-			return;
-		}
 		for(int x = 0; x < width; ++x)
 		{
 			for(int y = 0; y < height; ++y)
 			{
-				GameObject child = PrefabUtility.InstantiatePrefab(cellPrefab) as GameObject;
-				child.transform.parent = backgroundParent;
-				child.transform.localPosition = PositionOf(x, y);
+				if(cells[x, y] == null)
+				{
+					continue;
+				}
+				Destroy(cells[x, y].gameObject);
+				cells[x, y] = null;
 			}
-		}
-	}
-
-	[DeMethodButton(mode = DeButtonMode.NoPlayMode)]
-	public void Clear()
-	{
-		while(backgroundParent.childCount != 0)
-		{
-			DestroyImmediate(backgroundParent.GetChild(0).gameObject);
 		}
 	}
 
 	public void Add(int x, int y, int score)
 	{
-		GameObject cell = Instantiate(activeCellPrefab, PositionOf(x, y), activeCellPrefab.transform.rotation, activeParent);
-		cells[x, y] = cell.GetComponent<Cell>();
-		cells[x, y].Score = score;
-		cells[x, y].Redraw();
+		GameObject cellObject = Instantiate(activeCellPrefab, PositionOf(x, y), activeCellPrefab.transform.rotation, activeParent);
+		cellObject.SetActive(false);
+		Cell cell = cellObject.GetComponent<Cell>();
+		cell.Score = score;
+		cell.Redraw();
+		cells[x, y] = cell;
+		cellObject.transform.DOPunchScale(new Vector3(popupStrength, popupStrength, popupStrength), popupLength, 1, 0)
+			.SetDelay(transitionLength)
+			.OnStart(() => cellObject.SetActive(true));
+	}
+
+	public void Add(CellProfile cellProfile)
+	{
+		Add(cellProfile.Position.x, cellProfile.Position.y, cellProfile.Score);
 	}
 
 	public void HandleMove(List<PositionChange> changes)
 	{
 		foreach(PositionChange change in changes)
 		{
-			Debug.Log(change);
-			Debug.Assert(cells[change.Start.x, change.Start.y] != null, "Cell doesnt exist in display");
+			Debug.Assert(cells[change.Start.x, change.Start.y] != null, $"Cell {change.Start} doesnt exist in display\n Current state {ToString()}");
 
 			Vector2 endPosition = PositionOf(change.End);
-
-			if(change.CollapsePoint != null)
+			Cell moved = cells[change.Start.x, change.Start.y];
+			// Simple move to an empty cell.
+			if(cells[change.End.x, change.End.y] == null)
 			{
-				Debug.Assert(cells[change.CollapsePoint.Value.x, change.CollapsePoint.Value.y] != null, "Collapsed cell doesnt exist");
-				Cell consumed = cells[change.Start.x, change.Start.y];
-				cells[change.Start.x, change.Start.y] = null;
-				consumed.transform.DOLocalMove(endPosition, transitionLength).OnComplete(() =>
-				{
-					Destroy(consumed.gameObject);
-				});
-
-				Cell moved = cells[change.CollapsePoint.Value.x, change.CollapsePoint.Value.y];
-				moved.Score *= 2;
-				if(change.CollapsePoint != change.End)
-				{
-					cells[change.End.x, change.End.y] = moved;
-					cells[change.CollapsePoint.Value.x, change.CollapsePoint.Value.y] = null;
-				}
-
-				moved.transform.DOLocalMove(endPosition, transitionLength).OnComplete(() =>
-				{
-					moved.Redraw();
-				});
-			}
-			else
-			{
-				Cell moved = cells[change.Start.x, change.Start.y];
 				cells[change.End.x, change.End.y] = moved;
 				cells[change.Start.x, change.Start.y] = null;
 				moved.transform.DOLocalMove(endPosition, transitionLength);
+			}
+			else
+			{
+				// Move with 2 cells merging.
+				Cell receiver = cells[change.End.x, change.End.y];
+				receiver.Score *= 2;
+				cells[change.Start.x, change.Start.y] = null;
+				moved.transform.DOLocalMove(endPosition, transitionLength).OnComplete(() =>
+				{
+					receiver.Redraw();
+					Destroy(moved.gameObject);
+				});
 			}
 		}
 	}
@@ -145,6 +134,42 @@ public class FieldDisplay : MonoBehaviour
 
 		return value.ToString();
 	}
+
+	[DeMethodButton(mode = DeButtonMode.NoPlayMode)]
+	private void Setup()
+	{
+		SetStart();
+		Reset();
+		if(cellPrefab == null)
+		{
+			return;
+		}
+		for(int x = 0; x < width; ++x)
+		{
+			for(int y = 0; y < height; ++y)
+			{
+				GameObject child = PrefabUtility.InstantiatePrefab(cellPrefab) as GameObject;
+				child.transform.parent = backgroundParent;
+				child.transform.localPosition = PositionOf(x, y);
+			}
+		}
+	}
+
+	[DeMethodButton(mode = DeButtonMode.PlayModeOnly)]
+	private void LogState()
+	{
+		Debug.Log(ToString());
+	}
+
+	[DeMethodButton(mode = DeButtonMode.NoPlayMode)]
+	private void Reset()
+	{
+		while(backgroundParent.childCount != 0)
+		{
+			DestroyImmediate(backgroundParent.GetChild(0).gameObject);
+		}
+	}
+
 
 	private Vector2 PositionOf(int x, int y)
 	{

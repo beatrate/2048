@@ -1,9 +1,14 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using DG.DeInspektor.Attributes;
 
 public class FieldWrapper : MonoBehaviour
 {
+	public UnityEvent OnGameOver;
+	public UnityEvent OnWin;
+	public IntEvent OnScoreChanged;
+
 	private struct Reaction
 	{
 		public KeyCode Input { get; }
@@ -27,42 +32,75 @@ public class FieldWrapper : MonoBehaviour
 
 	private void Start()
 	{
-		field = new Field(new int[,]{
-			{ 0, 2, 0, 2 },
-			{ 4, 4, 0, 2 },
-			{ 0, 2, 0, 0 },
-			{ 32, 16, 32, 16 }
-		});
-		Debug.Log(field);
-		for(int x = 0; x < 4; ++x)
-		{
-			for(int y = 0; y < 4; ++y)
-			{
-				int score = field[x, y];
-				if(score != 0)
-				{
-					display.Add(x, y, score);
-				}
-			}
-		}
+		field = new Field();
+		StartGame();
 	}
 
 	private void Update()
 	{
+		if(field.Won || !field.HasMoves)
+		{
+			return;
+		}
 		foreach(Reaction reaction in reactions)
 		{
 			if(Input.GetKeyDown(reaction.Input))
 			{
-				Debug.Log(reaction.Result);
-				Debug.Log("Before");
-				Debug.Log(field);
-				Debug.Log(display);
-				display.HandleMove(field.MakeMove(reaction.Result));
-				Debug.Log("After");
-				Debug.Log(field);
-				Debug.Log(display);
+				Move(reaction.Result);
 				break;
 			}
+		}
+	}
+
+	public void StartGame()
+	{
+		field.Clear();
+		display.Clear();
+		AddRandomCell();
+		AddRandomCell();
+		OnScoreChanged.Invoke(0);
+	}
+
+	[DeMethodButton(mode = DeButtonMode.PlayModeOnly)]
+	private void LogState()
+	{
+		Debug.Log(field.ToString());
+	}
+
+
+	private void AddRandomCell()
+	{
+		display.Add(field.AddRandom());
+	}
+
+	private void Move(Direction direction)
+	{
+		if(field.Won || !field.HasMoves)
+		{
+			return;
+		}
+		int previousScore = field.Score;
+		List<PositionChange> changes = field.MakeMove(direction);
+		if(field.Score != previousScore)
+		{
+			OnScoreChanged.Invoke(field.Score);
+		}
+
+		if(changes.Count != 0)
+		{
+			display.HandleMove(changes);
+			AddRandomCell();
+		}
+
+		if(field.Won)
+		{
+			Debug.Log("Won");
+			OnWin.Invoke();
+		}
+		else if(!field.HasMoves)
+		{
+			Debug.Log("Game Over");
+			OnGameOver.Invoke();
 		}
 	}
 }
